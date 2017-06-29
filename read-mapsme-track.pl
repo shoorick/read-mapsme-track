@@ -16,7 +16,7 @@ read-mapsme-track.pl - Read GPS data from Maps with Me (maps.me)
 
 =item B<-o>, B<--outtype>
 
-Type of output data. Possible values: csv, tab.
+Type of output data. Possible values: csv, tab, gpx.
 
 =item B<-?>, B<--help>
 
@@ -48,7 +48,7 @@ use List::MoreUtils qw( zip );
 use Pod::Usage qw( pod2usage );
 use YAML::Tiny;
 
-# Print formatted row of data to STDOUT
+# Format row of data
 sub row {
     my $template = shift or die 'No template given';
     my %data
@@ -58,8 +58,7 @@ sub row {
 
     $data{$1} //= '' while $template =~  /\{(\w+)\}/g;
 
-    print $template =~ s/\{(\w+)\}/$data{$1}/gr;
-    print "\n";
+    return $template =~ s/\{(\w+)\}/$data{$1}/gr;
 }
 
 
@@ -85,7 +84,7 @@ pod2usage('verbose' => 2)
 my $template = $config->{'templates'}->{'row'}->{ $outtype }
     or die qq{Unknown output type "$outtype"};
 
-print $config->{'templates'}->{'header'}->{ $outtype }, "\n";
+print $config->{'templates'}->{'header'}->{ $outtype };
 
 foreach my $file ( @ARGV ) {
     open my $fh, '<:raw', $file
@@ -108,4 +107,4 @@ foreach my $file ( @ARGV ) {
         or warn "close failed: $!";
 }
 
-print $config->{'templates'}->{'footer'}->{ $outtype }, "\n";
+print $config->{'templates'}->{'footer'}->{ $outtype };
