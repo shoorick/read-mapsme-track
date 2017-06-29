@@ -1,0 +1,27 @@
+---
+pack_pattern:   ddddddddB
+header_size:    4
+fields:
+    - timestamp
+    - latitude
+    - longitude
+    - altitude
+    - speed
+    - bearing
+    - horizontal_accuracy
+    - vertical_accuracy
+    - source
+
+# Formats and templates
+# default
+output_format: csv
+templates:
+    header:
+        csv:    "timestamp,latitude,longitude,altitude,speed,bearing,horizontal_accuracy,vertical_accuracy,source"
+        tab:    "timestamp\tlatitude\tlongitude\taltitude\tspeed\tbearing\thorizontal_accuracy\tvertical_accuracy\tsource"
+    row:
+        csv:    "{timestamp},{latitude},{longitude},{altitude},{speed},{bearing},{horizontal_accuracy},{vertical_accuracy},{source}"
+        tab:    "{timestamp}\t{latitude}\t{longitude}\t{altitude}\t{speed}\t{bearing}\t{horizontal_accuracy}\t{vertical_accuracy}\t{source}"
+    footer:
+        csv:    ""
+        tab:    ""

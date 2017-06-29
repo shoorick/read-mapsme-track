@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 =encoding utf8
 
@@ -38,36 +38,37 @@ Alexander Sapozhnikov, L<< E<lt>shoorick@cpan.orgE<gt> >>, L<< http://as.susu.ru
 
 =cut
 
+my $VERSION = 0.1;
+#   CREATED   2017-06-29
+
+use strict;
+use FindBin;
 use Getopt::Long;
+use List::MoreUtils qw( zip );
 use Pod::Usage qw( pod2usage );
+use YAML::Tiny;
 
-my $PACK_PATTERN = 'ddddddddB';
-my $CHUNK_SIZE   = length pack $PACK_PATTERN;
-my $HEADER_SIZE  = 4;
+# Print formatted row of data to STDOUT
+sub row {
+    my $template = shift or die 'No template given';
+    my %data
+        = ref $_[0] eq 'HASH'
+        ? %{  $_[0] }
+        : @_;
 
-# TODO Move to config
-my @FIELDS = qw(
-    timestamp latitude longitude altitude speed bearing
-    horizontal_accuracy vertical_accuracy source
-);
+    $data{$1} //= '' while $template =~  /\{(\w+)\}/g;
 
-my %FORMAT = (
-    'csv' => join(',',  ('%s') x scalar(@FIELDS) ) . "\n",
-    'tab' => join("\t", ('%s') x scalar(@FIELDS) ) . "\n",
-);
+    print $template =~ s/\{(\w+)\}/$data{$1}/gr;
+    print "\n";
+}
 
-my %HEADER = (
-    'csv' => join(',',  @FIELDS ) . "\n",
-    'tab' => join("\t", @FIELDS ) . "\n",
-);
 
-my %FOOTER = (
-    'csv' => '',
-    'tab' => '',
-);
+my $config = YAML::Tiny->read("$FindBin::Bin/config.yml")->[0];
+my $CHUNK_SIZE   = length pack $config->{'pack_pattern'};
+my $FIELDS       = $config->{'fields'};
 
 map { $_ = '' } my ( $need_help, $need_manual, $verbose );
-my $outtype = 'csv';
+my $outtype = $config->{'output_format'};
 
 GetOptions(
     'outtype=s' => \$outtype,
@@ -81,28 +82,30 @@ pod2usage(1)
 pod2usage('verbose' => 2)
     if $need_manual;
 
+my $template = $config->{'templates'}->{'row'}->{ $outtype }
+    or die qq{Unknown output type "$outtype"};
+
+print $config->{'templates'}->{'header'}->{ $outtype }, "\n";
+
 foreach my $file ( @ARGV ) {
     open my $fh, '<:raw', $file
         or die "cannot open $file for reading: $!";
 
-    my $bytes_read = read $fh, my $header, $HEADER_SIZE;
+    my $bytes_read = read($fh, my $header, $config->{'header_size'});
     my $buffer = '';
     my $offset = $bytes_read;
 
-    print $HEADER{$outtype};
-
     while ( $bytes_read = read $fh, $buffer, $CHUNK_SIZE ) {
-        my (
-            $timestamp, $latitude, $longitude, $altitude, $speed, $bearing,
-            $horizontal_accuracy, $vertical_accuracy, $source
-        ) = unpack $PACK_PATTERN, $buffer;
+        my @data = unpack $config->{'pack_pattern'}, $buffer;
 
-        printf $FORMAT{$outtype},
-            $timestamp, $latitude, $longitude, $altitude, $speed, $bearing,
-            $horizontal_accuracy, $vertical_accuracy, $source;
+        print row(
+            $config->{'templates'}->{'row'}->{ $outtype },
+            zip @$FIELDS, @data
+        );
     }
 
-    print $FOOTER{$outtype};
     close $fh
         or warn "close failed: $!";
 }
+
+print $config->{'templates'}->{'footer'}->{ $outtype }, "\n";
