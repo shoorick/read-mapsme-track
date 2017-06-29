@@ -41,18 +41,24 @@ Alexander Sapozhnikov, L<< E<lt>shoorick@cpan.orgE<gt> >>, L<< http://as.susu.ru
 use Getopt::Long;
 use Pod::Usage qw( pod2usage );
 
-my $CHUNK_SIZE = 65;
-my $HEADER_SIZE = 4;
+my $PACK_PATTERN = 'ddddddddB';
+my $CHUNK_SIZE   = length pack $PACK_PATTERN;
+my $HEADER_SIZE  = 4;
 
 # TODO Move to config
+my @FIELDS = qw(
+    timestamp latitude longitude altitude speed bearing
+    horizontal_accuracy vertical_accuracy source
+);
+
 my %FORMAT = (
-    'csv' => join(',',  ('%s')x9 ) . "\n",
-    'tab' => join("\t", ('%s')x9 ) . "\n",
+    'csv' => join(',',  ('%s') x scalar(@FIELDS) ) . "\n",
+    'tab' => join("\t", ('%s') x scalar(@FIELDS) ) . "\n",
 );
 
 my %HEADER = (
-    'csv' => join(',',  qw( timestamp latitude longitude altitude speed bearing horizontal_accuracy vertical_accuracy source ) ) . "\n",
-    'tab' => join("\t", qw( timestamp latitude longitude altitude speed bearing horizontal_accuracy vertical_accuracy source ) ) . "\n",
+    'csv' => join(',',  @FIELDS ) . "\n",
+    'tab' => join("\t", @FIELDS ) . "\n",
 );
 
 my %FOOTER = (
@@ -89,7 +95,7 @@ foreach my $file ( @ARGV ) {
         my (
             $timestamp, $latitude, $longitude, $altitude, $speed, $bearing,
             $horizontal_accuracy, $vertical_accuracy, $source
-        ) = unpack 'ddddddddB', $buffer;
+        ) = unpack $PACK_PATTERN, $buffer;
 
         printf $FORMAT{$outtype},
             $timestamp, $latitude, $longitude, $altitude, $speed, $bearing,
